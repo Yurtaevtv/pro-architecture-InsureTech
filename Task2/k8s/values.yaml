@@ -1,0 +1,49 @@
+# prometheus-adapter-values.yaml
+prometheus:
+  url: http://prometheus.istio-system.svc.cluster.local
+  port: 9090
+
+rules:
+  default: false
+  custom:
+  # Правило для метрики promhttp_metric_handler_requests_total
+  - seriesQuery: 'promhttp_metric_handler_requests_total{namespace!="",pod!=""}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+    name:
+      # Оставляем оригинальное имя метрики
+      as: "promhttp_metric_handler_requests_total"
+    # Суммируем по кодам и считаем rate
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+  
+  # Правило для метрики с агрегацией по кодам
+  - seriesQuery: 'promhttp_metric_handler_requests_total{namespace!="",pod!=""}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+    name:
+      as: "metrics_requests_total"
+    metricsQuery: 'sum(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+  
+  # Правило только для успешных запросов (200)
+  - seriesQuery: 'promhttp_metric_handler_requests_total{code="200",namespace!="",pod!=""}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+    name:
+      as: "metrics_requests_success"
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+  
+  # Правило для ошибок (500 + 503)
+  - seriesQuery: 'promhttp_metric_handler_requests_total{code=~"500|503",namespace!="",pod!=""}'
+    resources:
+      overrides:
+        namespace: {resource: "namespace"}
+        pod: {resource: "pod"}
+    name:
+      as: "metrics_requests_errors"
+    metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'

@@ -1,0 +1,53 @@
+# destination-rule.yaml - правила маршрутизации на основе метрик
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: reviews-route
+spec:
+  host: reviews
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+    loadBalancer:
+      simple: ROUND_ROBIN
+      # Для динамической балансировки можно использовать LocalityLbSetting
+      localityLbSetting:
+        enabled: true
+        failover:
+        - from: us-east
+          to: us-west
+---
+# virtual-service.yaml - управление трафиком на основе метрик
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: reviews
+spec:
+  hosts:
+  - reviews
+  http:
+  - match:
+    - headers:
+        x-end-user:
+          exact: "premium"
+    route:
+    - destination:
+        host: reviews
+        subset: v2
+      weight: 80
+    - destination:
+        host: reviews
+        subset: v1
+      weight: 20
+  - route:
+    - destination:
+        host: reviews
+        subset: v1
