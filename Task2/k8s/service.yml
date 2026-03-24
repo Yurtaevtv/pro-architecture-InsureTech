@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: scale-test-service
+  labels:
+    app: scale-test-service
+spec:
+  type: ClusterIP
+  selector:
+    app: test-deployment-app     
+  ports:
+  - name: http
+    port: 8080      
+    targetPort: 8080
+    protocol: TCP
+  sessionAffinity: ClientIP 
